@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MyStore</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+    header { background: #007bff; color: white; padding: 10px 20px; position: relative; }
+    h1, h2 { margin: 5px 0; }
+    #admin-login-btn { position: absolute; top: 10px; right: 20px; padding: 5px 10px; cursor: pointer; }
+
+    main { display: flex; padding: 20px; gap: 20px; }
+    .products { display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: 20px; flex: 3; }
+    .product { border: 1px solid #ccc; padding: 10px; text-align: center; border-radius: 5px; background: #f9f9f9; }
+    .product img { width: 100%; height: 120px; object-fit: cover; border-radius: 5px; }
+
+    .cart { flex: 1; border: 1px solid #ccc; padding: 10px; border-radius: 5px; background: #f5f5f5; max-height: 600px; overflow-y: auto; }
+    .cart h2 { margin-top: 0; }
+    .cart-item { display: flex; justify-content: space-between; margin-bottom: 5px; }
+
+    #admin-panel {
+      display: none;
+      position: fixed;
+      top: 5%;
+      left: 5%;
+      width: 90%;
+      height: 90%;
+      background: #f5f5f5;
+      border: 2px solid #333;
+      padding: 20px;
+      overflow-y: auto;
+      z-index: 100;
+    }
+    #admin-panel table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    #admin-panel th, #admin-panel td {
+      border: 1px solid #333;
+      padding: 8px;
+      text-align: center;
+    }
+    #close-admin {
+      background: red;
+      color: white;
+      padding: 5px 10px;
+      cursor: pointer;
+      float: right;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🛒 MyStore</h1>
+  <h2>Cart Total: ₹<span id="total">0</span></h2>
+  <button id="admin-login-btn">Admin Login</button>
+</header>
+
+<main>
+  <div class="products" id="products"></div>
+  <div class="cart">
+    <h2>Cart</h2>
+    <div id="cart-items"></div>
+  </div>
+</main>
+
+<!-- Admin Panel -->
+<div id="admin-panel">
+  <button id="close-admin">Close</button>
+  <h2>Admin Panel - Edit Products</h2>
+  <table id="admin-table">
+    <tr>
+      <th>Product</th>
+      <th>Price (₹)</th>
+      <th>Demand</th>
+      <th>Action</th>
+    </tr>
+  </table>
+</div>
+
+<script>
+const products = [
+  { id:1, name:"Mouse", basePrice:900, demand:1, image:"images/p1.jpg" },
+  { id:2, name:"Keyboard", basePrice:1500, demand:1, image:"images/p2.jpg" },
+  { id:3, name:"Monitor", basePrice:12000, demand:1, image:"images/p3.jpg" },
+  { id:4, name:"Printer", basePrice:9000, demand:1, image:"images/p4.jpg" },
+  { id:5, name:"Headphones", basePrice:3000, demand:1, image:"images/p5.jpg" },
+  { id:6, name:"Speaker", basePrice:4500, demand:1, image:"images/p6.jpg" },
+  { id:7, name:"Webcam", basePrice:2500, demand:1, image:"images/p7.jpg" },
+  { id:8, name:"Power Bank", basePrice:2000, demand:1, image:"images/p8.jpg" },
+  { id:9, name:"Tablet", basePrice:18000, demand:1, image:"images/p9.jpg" },
+  { id:10, name:"Router", basePrice:3500, demand:1, image:"images/p10.jpg" },
+  { id:11, name:"Hard Disk", basePrice:6000, demand:1, image:"images/p11.jpg" },
+  { id:12, name:"Pen Drive", basePrice:700, demand:1, image:"images/p12.jpg" },
+  { id:13, name:"SSD", basePrice:5000, demand:1, image:"images/p13.jpg" },
+  { id:14, name:"Camera", basePrice:30000, demand:1, image:"images/p14.jpg" },
+  { id:15, name:"Charger", basePrice:1200, demand:1, image:"images/p15.jpg" },
+  { id:16, name:"Tripod", basePrice:1800, demand:1, image:"images/p16.jpg" },
+  { id:17, name:"Smart Watch", basePrice:8000, demand:1, image:"images/p17.jpg" },
+  { id:18, name:"Earbuds", basePrice:4000, demand:1, image:"images/p18.jpg" },
+  { id:19, name:"Microphone", basePrice:2500, demand:1, image:"images/p19.jpg" },
+  { id:20, name:"Laptop Stand", basePrice:2000, demand:1, image:"images/p20.jpg" }
+];
+
+let cart = [];
+
+const productsDiv = document.getElementById("products");
+const cartDiv = document.getElementById("cart-items");
+const totalSpan = document.getElementById("total");
+const adminPanel = document.getElementById("admin-panel");
+const adminTable = document.getElementById("admin-table");
+const adminBtn = document.getElementById("admin-login-btn");
+const closeAdmin = document.getElementById("close-admin");
+
+function getDynamicPrice(product) { return product.basePrice + (product.demand*10); }
+
+function renderProducts() {
+  productsDiv.innerHTML = "";
+  products.forEach(p => {
+    const price = getDynamicPrice(p);
+    productsDiv.innerHTML += `
+      <div class="product">
+        <img src="${p.image}" alt="${p.name}">
+        <h4>${p.name}</h4>
+        <p>Price: ₹${price}</p>
+        <p>Demand: ${p.demand}</p>
+        <button onclick="addToCart(${p.id})">Add to Cart</button>
+      </div>
+    `;
+  });
+}
+
+function addToCart(id){
+  const p = products.find(pr => pr.id === id);
+  p.demand++;
+  const price = getDynamicPrice(p);
+
+  const item = cart.find(i => i.id===id);
+  if(item){ item.qty++; item.price = price; }
+  else cart.push({id:p.id, name:p.name, price:price, qty:1});
+
+  renderProducts(); renderCart();
+}
+
+function renderCart(){
+  cartDiv.innerHTML=""; let total=0;
+  cart.forEach(i=>{
+    total += i.price*i.qty;
+    cartDiv.innerHTML += `<div class="cart-item">
+      ${i.name} (₹${i.price} × ${i.qty})
+      <button onclick="changeQty(${i.id},-1)">−</button>
+      <button onclick="changeQty(${i.id},1)">+</button>
+      <button onclick="removeItem(${i.id})">❌</button>
+    </div>`;
+  });
+  totalSpan.innerText = total;
+}
+
+function changeQty(id,delta){ const item = cart.find(i=>i.id===id); if(!item) return; item.qty+=delta; if(item.qty<=0) removeItem(id); renderCart(); }
+function removeItem(id){ cart = cart.filter(i=>i.id!==id); renderCart(); }
+
+adminBtn.addEventListener("click",()=>{
+  const pw = prompt("Enter Admin Password:");
+  if(pw==="Admin123"){ adminPanel.style.display="block"; generateAdminTable(); }
+  else alert("Wrong Password!");
+});
+closeAdmin.addEventListener("click",()=>{ adminPanel.style.display="none"; });
+
+function generateAdminTable(){
+  adminTable.querySelectorAll("tr:not(:first-child)").forEach(r=>r.remove());
+  products.forEach(p=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${p.name}</td>
+      <td><input type="number" id="price-${p.id}" value="${p.basePrice}"></td>
+      <td><input type="number" id="demand-${p.id}" value="${p.demand}"></td>
+      <td><button onclick="updateProduct(${p.id})">Update</button></td>`;
+    adminTable.appendChild(tr);
+  });
+}
+
+window.updateProduct=function(id){
+  const price=Number(document.getElementById(`price-${id}`).value);
+  const demand=Number(document.getElementById(`demand-${id}`).value);
+  const p=products.find(x=>x.id===id);
+  p.basePrice=price; p.demand=demand;
+  alert(`${p.name} updated!\nPrice: ₹${p.basePrice}, Demand: ${p.demand}`);
+  renderProducts();
+}
+
+renderProducts(); renderCart();
+</script>
+
+</body>
+</html>
